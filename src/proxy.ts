@@ -1,50 +1,41 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { jwtVerify } from "jose";
+
+const SECRET = new TextEncoder().encode(
+  process.env.AUTH_SECRET ?? "fallback-secret-change-this"
+);
+
+const PUBLIC_ROUTES = ["/login", "/register", "/api/auth/login"];
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
-  const publicRoutes = ["/login", "/register"];
 
-  if (!user && !publicRoutes.includes(pathname)) {
+  if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get("zyx_session")?.value;
+
+  if (!token) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && publicRoutes.includes(pathname)) {
+  try {
+    await jwtVerify(token, SECRET);
+    return NextResponse.next();
+  } catch {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+    url.pathname = "/login";
+    const response = NextResponse.redirect(url);
+    response.cookies.delete("zyx_session");
+    return response;
   }
-
-  return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

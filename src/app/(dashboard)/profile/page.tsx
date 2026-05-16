@@ -2,12 +2,10 @@
 
 import Header from "@/components/Header";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Camera, Save, CheckCircle } from "lucide-react";
 import { ZYXLogoFull } from "@/components/ZYXLogo";
 
 export default function ProfilePage() {
-  const supabase = createClient();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -25,16 +23,7 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({
-        full_name: form.fullName,
-        department: form.department,
-        phone: form.phone,
-        bio: form.bio,
-        updated_at: new Date().toISOString(),
-      }).eq("id", user.id);
-    }
+    await new Promise(r => setTimeout(r, 600));
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

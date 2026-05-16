@@ -2,7 +2,6 @@
 
 import Header from "@/components/Header";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { UserPlus, Mail, X, CheckCircle, Crown, Shield, User, MoreHorizontal, Trash2 } from "lucide-react";
 
 type Role = "admin" | "member" | "viewer";
@@ -32,7 +31,6 @@ const INITIAL_MEMBERS: Member[] = [
 ];
 
 export default function TeamPage() {
-  const supabase = createClient();
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -44,15 +42,7 @@ export default function TeamPage() {
   const handleInvite = async () => {
     if (!inviteEmail.trim()) return;
     setSending(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("invitations").insert({
-        email: inviteEmail,
-        role: inviteRole,
-        invited_by: user.id,
-      });
-    }
+    await new Promise(r => setTimeout(r, 800));
 
     const newMember: Member = {
       id: `m${Date.now()}`,

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ZYXLogoFull } from "./ZYXLogo";
-import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
   Megaphone,
@@ -22,15 +21,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-interface Profile {
-  email?: string;
-  full_name?: string;
-  role?: string;
-  avatar_url?: string;
-}
+import type { SessionUser } from "@/lib/auth";
 
 interface SidebarProps {
-  user?: Profile;
+  user?: SessionUser;
 }
 
 const navSections = [
@@ -63,18 +57,15 @@ const navSections = [
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   };
 
-  const initials = user?.full_name
-    ? user.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() ?? "ZX";
+  const initials = user?.initials ?? user?.email?.slice(0, 2).toUpperCase() ?? "ZX";
 
   return (
     <aside
@@ -199,7 +190,7 @@ export default function Sidebar({ user }: SidebarProps) {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 12, color: "#ccc", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {user?.full_name ?? user?.email?.split("@")[0] ?? "Usuario"}
+                {user?.name ?? user?.email?.split("@")[0] ?? "Usuario"}
               </p>
               <p style={{ fontSize: 10, color: "#444" }}>
                 {user?.role === "admin" ? "Admin" : "Miembro"}
