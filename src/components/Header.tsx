@@ -2,6 +2,8 @@
 
 import { Search, Bell, RefreshCw } from "lucide-react";
 import { notifications } from "@/lib/data";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface HeaderProps {
   title: string;
@@ -9,7 +11,16 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle }: HeaderProps) {
+  const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
   const unread = notifications.filter(n => !n.read).length;
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    await new Promise(r => setTimeout(r, 800));
+    setRefreshing(false);
+  };
 
   return (
     <header
@@ -64,24 +75,27 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
         {/* Refresh */}
         <button
+          onClick={handleRefresh}
+          disabled={refreshing}
           style={{
             background: "#111",
             border: "1px solid #222",
             borderRadius: 8,
             padding: "7px 10px",
-            cursor: "pointer",
-            color: "#555",
+            cursor: refreshing ? "default" : "pointer",
+            color: refreshing ? "#3b82f6" : "#555",
             display: "flex",
             alignItems: "center",
-            transition: "all 0.15s ease",
+            transition: "color 0.2s",
           }}
           title="Actualizar datos"
         >
-          <RefreshCw size={15} />
+          <RefreshCw size={15} style={{ animation: refreshing ? "spin 0.8s linear infinite" : "none" }} />
         </button>
 
         {/* Notifications */}
         <button
+          onClick={() => router.push("/notifications")}
           style={{
             background: "#111",
             border: "1px solid #222",
@@ -118,6 +132,10 @@ export default function Header({ title, subtitle }: HeaderProps) {
           {new Date().toLocaleDateString("es-MX", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
         </span>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </header>
   );
 }

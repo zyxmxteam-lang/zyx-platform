@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "@/components/Header";
+import { useToast } from "@/components/Toast";
 import { useState } from "react";
 import { UserPlus, Mail, X, CheckCircle, Crown, Shield, User, MoreHorizontal, Trash2 } from "lucide-react";
 
@@ -31,6 +32,7 @@ const INITIAL_MEMBERS: Member[] = [
 ];
 
 export default function TeamPage() {
+  const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -72,18 +74,24 @@ export default function TeamPage() {
     setMembers(prev => [...prev, newMember]);
     setSending(false);
     setSentSuccess(true);
+    const sentEmail = inviteEmail;
     setInviteEmail("");
-    setTimeout(() => { setSentSuccess(false); setShowInvite(false); }, 3000);
+    toast(`Invitación enviada a ${sentEmail}`, "success");
+    setTimeout(() => setSentSuccess(false), 2500);
   };
 
   const removeM = (id: string) => {
+    const member = members.find(m => m.id === id);
     setMembers(prev => prev.filter(m => m.id !== id));
     setActiveMenu(null);
+    if (member) toast(`${member.name} eliminado del equipo`, "info");
   };
 
   const changeRole = (id: string, role: Role) => {
+    const member = members.find(m => m.id === id);
     setMembers(prev => prev.map(m => m.id === id ? { ...m, role } : m));
     setActiveMenu(null);
+    if (member) toast(`Rol de ${member.name} actualizado a ${ROLE_CONFIG[role].label}`, "success");
   };
 
   const active = members.filter(m => m.status === "active");
@@ -129,15 +137,13 @@ export default function TeamPage() {
               </button>
             </div>
 
-            {sentSuccess ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10 }}>
-                <CheckCircle size={18} color="#22c55e" />
-                <div>
-                  <p style={{ fontSize: 13.5, color: "#22c55e", fontWeight: 600 }}>¡Invitación enviada!</p>
-                  <p style={{ fontSize: 12.5, color: "#22c55e", opacity: 0.7, marginTop: 2 }}>El email llegará a {inviteEmail || "la dirección indicada"} en unos momentos.</p>
-                </div>
+            {sentSuccess && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, marginBottom: 14 }}>
+                <CheckCircle size={16} color="#22c55e" />
+                <p style={{ fontSize: 13, color: "#22c55e", fontWeight: 500 }}>¡Invitación enviada! Puedes invitar a otra persona.</p>
               </div>
-            ) : (
+            )}
+            {(
               <>{sendError && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
                   <span style={{ fontSize: 13, color: "#ef4444" }}>⚠ {sendError}</span>
@@ -194,7 +200,7 @@ export default function TeamPage() {
                 <button
                   onClick={handleInvite}
                   disabled={sending || !inviteEmail.trim()}
-                  style={{ background: "#fff", color: "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                  style={{ background: sending || !inviteEmail.trim() ? "#1a1a1a" : "#fff", color: sending || !inviteEmail.trim() ? "#555" : "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13.5, fontWeight: 600, cursor: sending || !inviteEmail.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
                 >
                   <Mail size={14} /> {sending ? "Enviando..." : "Enviar Invitación"}
                 </button>

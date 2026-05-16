@@ -1,9 +1,10 @@
 "use client";
 
 import Header from "@/components/Header";
-import { researchItems } from "@/lib/data";
+import { researchItems as initialItems } from "@/lib/data";
+import { useToast } from "@/components/Toast";
 import { useState } from "react";
-import { Search, Tag, Calendar, User, ChevronRight, Plus, BookOpen, Filter } from "lucide-react";
+import { Search, Tag, Calendar, User, ChevronRight, Plus, BookOpen, X } from "lucide-react";
 
 const priorityColors: Record<string, string> = {
   alta: "#ef4444",
@@ -20,14 +21,50 @@ const categoryColors: Record<string, string> = {
   "Industria": "#6366f1",
 };
 
+const CATEGORIES = ["Competencia", "Audiencia", "Optimización", "Creativos", "SEO/SEM", "Industria"];
+
+interface ResearchItem {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  priority: string;
+  date: string;
+  author: string;
+  tags: string[];
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  background: "#0d0d0d",
+  border: "1px solid #222",
+  borderRadius: 8,
+  padding: "9px 13px",
+  color: "#ccc",
+  fontSize: 13,
+  outline: "none",
+};
+
 export default function ResearchPage() {
+  const { toast } = useToast();
+  const [items, setItems] = useState<ResearchItem[]>(initialItems as ResearchItem[]);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("Todos");
   const [selected, setSelected] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const categories = ["Todos", ...Array.from(new Set(researchItems.map(r => r.category)))];
+  const [form, setForm] = useState({
+    title: "",
+    summary: "",
+    category: "Competencia",
+    priority: "media",
+    tags: "",
+  });
 
-  const filtered = researchItems.filter(r => {
+  const categories = ["Todos", ...Array.from(new Set(items.map(r => r.category)))];
+
+  const filtered = items.filter(r => {
     const matchSearch = search === "" ||
       r.title.toLowerCase().includes(search.toLowerCase()) ||
       r.summary.toLowerCase().includes(search.toLowerCase()) ||
@@ -36,22 +73,48 @@ export default function ResearchPage() {
     return matchSearch && matchCat;
   });
 
-  const selectedItem = researchItems.find(r => r.id === selected);
+  const selectedItem = items.find(r => r.id === selected);
+
+  const handleCreate = () => {
+    if (!form.title.trim()) {
+      toast("Escribe un título para el report", "error");
+      return;
+    }
+    const newItem: ResearchItem = {
+      id: `r${Date.now()}`,
+      title: form.title,
+      summary: form.summary || "Sin descripción.",
+      category: form.category,
+      priority: form.priority,
+      date: new Date().toISOString().split("T")[0],
+      author: "Diego Sucrovich",
+      tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
+    };
+    setItems(prev => [newItem, ...prev]);
+    toast(`Report "${form.title}" creado exitosamente`, "success");
+    setShowModal(false);
+    setForm({ title: "", summary: "", category: "Competencia", priority: "media", tags: "" });
+  };
+
+  const handleExportPDF = async () => {
+    if (!selectedItem) return;
+    setExporting(true);
+    await new Promise(r => setTimeout(r, 800));
+    setExporting(false);
+    toast(`PDF de "${selectedItem.title}" exportado`, "success");
+  };
 
   return (
     <div style={{ padding: "0 0 40px" }}>
-      <Header
-        title="Research Hub"
-        subtitle="Base de conocimiento, análisis e investigación estratégica"
-      />
+      <Header title="Research Hub" subtitle="Base de conocimiento, análisis e investigación estratégica" />
 
       <div style={{ padding: "28px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Stats Bar */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: "#1c1c1c", borderRadius: 12, overflow: "hidden", border: "1px solid #1c1c1c" }}>
           {[
-            { label: "Total Reports", value: researchItems.length },
-            { label: "Alta Prioridad", value: researchItems.filter(r => r.priority === "alta").length, color: "#ef4444" },
+            { label: "Total Reports", value: items.length },
+            { label: "Alta Prioridad", value: items.filter(r => r.priority === "alta").length, color: "#ef4444" },
             { label: "Esta Semana", value: 2 },
             { label: "Categorías", value: categories.length - 1 },
           ].map((s, i) => (
@@ -74,39 +137,10 @@ export default function ResearchPage() {
             />
           </div>
           <button
-            style={{
-              background: "#111",
-              border: "1px solid #222",
-              borderRadius: 10,
-              padding: "10px 16px",
-              color: "#555",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
+            onClick={() => setShowModal(true)}
+            style={{ background: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", color: "#000", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           >
-            <Filter size={14} />
-            Filtros
-          </button>
-          <button
-            style={{
-              background: "#fff",
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 18px",
-              color: "#000",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            <Plus size={14} />
-            Nuevo Report
+            <Plus size={14} /> Nuevo Report
           </button>
         </div>
 
@@ -140,7 +174,7 @@ export default function ResearchPage() {
             {filtered.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px", color: "#444" }}>
                 <BookOpen size={32} color="#333" style={{ margin: "0 auto 12px" }} />
-                <p>No se encontraron resultados para &ldquo;{search}&rdquo;</p>
+                <p>No se encontraron resultados</p>
               </div>
             )}
             {filtered.map(item => (
@@ -159,29 +193,10 @@ export default function ResearchPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          fontWeight: 600,
-                          padding: "2px 8px",
-                          borderRadius: 5,
-                          background: `${categoryColors[item.category] ?? "#555"}15`,
-                          color: categoryColors[item.category] ?? "#888",
-                          border: `1px solid ${categoryColors[item.category] ?? "#555"}25`,
-                        }}
-                      >
+                      <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 5, background: `${categoryColors[item.category] ?? "#555"}15`, color: categoryColors[item.category] ?? "#888", border: `1px solid ${categoryColors[item.category] ?? "#555"}25` }}>
                         {item.category}
                       </span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 600,
-                          padding: "2px 8px",
-                          borderRadius: 5,
-                          background: `${priorityColors[item.priority]}15`,
-                          color: priorityColors[item.priority],
-                        }}
-                      >
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 5, background: `${priorityColors[item.priority]}15`, color: priorityColors[item.priority] }}>
                         {item.priority.toUpperCase()}
                       </span>
                     </div>
@@ -194,12 +209,10 @@ export default function ResearchPage() {
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 10 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#444" }}>
-                    <Calendar size={11} />
-                    {item.date}
+                    <Calendar size={11} /> {item.date}
                   </span>
                   <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#444" }}>
-                    <User size={11} />
-                    {item.author}
+                    <User size={11} /> {item.author}
                   </span>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     {item.tags.map(tag => (
@@ -276,11 +289,18 @@ export default function ResearchPage() {
               <div style={{ height: 1, background: "#1c1c1c", margin: "20px 0" }} />
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <button style={{ background: "#fff", color: "#000", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                <button
+                  onClick={() => toast(`Abriendo reporte completo de "${selectedItem.title}"`, "info")}
+                  style={{ background: "#fff", color: "#000", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                >
                   Ver Reporte Completo
                 </button>
-                <button style={{ background: "#1a1a1a", color: "#ccc", border: "1px solid #2a2a2a", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer" }}>
-                  Exportar PDF
+                <button
+                  onClick={handleExportPDF}
+                  disabled={exporting}
+                  style={{ background: "#1a1a1a", color: exporting ? "#555" : "#ccc", border: "1px solid #2a2a2a", borderRadius: 8, padding: "10px 16px", fontSize: 13, cursor: "pointer" }}
+                >
+                  {exporting ? "Exportando..." : "Exportar PDF"}
                 </button>
               </div>
             </div>
@@ -288,6 +308,82 @@ export default function ResearchPage() {
         </div>
 
       </div>
+
+      {/* New Report Modal */}
+      {showModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}
+        >
+          <div style={{ background: "#111", border: "1px solid #222", borderRadius: 16, padding: "28px", width: "100%", maxWidth: 480 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Nuevo Report</h3>
+              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#444" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 6 }}>Título</label>
+                <input
+                  autoFocus
+                  placeholder="ej. Análisis de competencia Q3..."
+                  value={form.title}
+                  onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 6 }}>Resumen ejecutivo</label>
+                <textarea
+                  placeholder="Describe los hallazgos principales..."
+                  value={form.summary}
+                  onChange={e => setForm(prev => ({ ...prev, summary: e.target.value }))}
+                  style={{ ...inputStyle, minHeight: 90, resize: "vertical" as const }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 6 }}>Categoría</label>
+                  <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} style={{ ...inputStyle }}>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 6 }}>Prioridad</label>
+                  <select value={form.priority} onChange={e => setForm(prev => ({ ...prev, priority: e.target.value }))} style={{ ...inputStyle }}>
+                    <option value="alta">Alta</option>
+                    <option value="media">Media</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, color: "#555", display: "block", marginBottom: 6 }}>Etiquetas (separadas por coma)</label>
+                <input
+                  placeholder="meta-ads, audiencia, retargeting..."
+                  value={form.tags}
+                  onChange={e => setForm(prev => ({ ...prev, tags: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button onClick={() => setShowModal(false)} style={{ flex: 1, background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#888", borderRadius: 10, padding: "10px", fontSize: 13, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+                <button onClick={handleCreate} style={{ flex: 2, background: "#fff", color: "#000", border: "none", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Crear Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

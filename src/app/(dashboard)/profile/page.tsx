@@ -4,8 +4,10 @@ import Header from "@/components/Header";
 import { useState } from "react";
 import { Camera, Save, CheckCircle } from "lucide-react";
 import { ZYXLogoFull } from "@/components/ZYXLogo";
+import { useToast } from "@/components/Toast";
 
 export default function ProfilePage() {
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -26,6 +28,7 @@ export default function ProfilePage() {
     await new Promise(r => setTimeout(r, 600));
     setSaving(false);
     setSaved(true);
+    toast("Perfil guardado exitosamente", "success");
     setTimeout(() => setSaved(false), 3000);
   };
 

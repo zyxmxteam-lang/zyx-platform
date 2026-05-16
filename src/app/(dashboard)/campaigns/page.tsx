@@ -1,7 +1,8 @@
 "use client";
 
 import Header from "@/components/Header";
-import { metaCampaigns, weeklyData } from "@/lib/data";
+import { metaCampaigns as initialCampaigns, weeklyData } from "@/lib/data";
+import { useToast } from "@/components/Toast";
 import {
   BarChart,
   Bar,
@@ -61,16 +62,27 @@ const CustomTooltip = ({ active, payload, label }: {active?: boolean, payload?: 
 };
 
 export default function CampaignsPage() {
+  const { toast } = useToast();
+  const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [selected, setSelected] = useState<string | null>(null);
-  const campaign = metaCampaigns.find(c => c.id === selected) ?? metaCampaigns[0];
+  const campaign = campaigns.find(c => c.id === selected) ?? campaigns[0];
 
   const totals = {
-    spend: metaCampaigns.reduce((a, c) => a + c.spent, 0),
-    revenue: metaCampaigns.reduce((a, c) => a + c.revenue, 0),
-    conversions: metaCampaigns.reduce((a, c) => a + c.conversions, 0),
-    impressions: metaCampaigns.reduce((a, c) => a + c.impressions, 0),
+    spend: campaigns.reduce((a, c) => a + c.spent, 0),
+    revenue: campaigns.reduce((a, c) => a + c.revenue, 0),
+    conversions: campaigns.reduce((a, c) => a + c.conversions, 0),
+    impressions: campaigns.reduce((a, c) => a + c.impressions, 0),
   };
   const avgRoas = (totals.revenue / totals.spend).toFixed(2);
+
+  const toggleStatus = (id: string) => {
+    setCampaigns(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const next = c.status === "active" ? "paused" : "active";
+      toast(next === "paused" ? `Campaña "${c.name.split(" — ")[0]}" pausada` : `Campaña "${c.name.split(" — ")[0]}" reactivada`, next === "paused" ? "info" : "success");
+      return { ...c, status: next };
+    }));
+  };
 
   return (
     <div style={{ padding: "0 0 40px" }}>
@@ -112,7 +124,7 @@ export default function CampaignsPage() {
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Spend vs Revenue por Campaña</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart
-                data={metaCampaigns.map(c => ({ name: c.name.split(" — ")[0], spend: c.spent, revenue: c.revenue }))}
+                data={campaigns.map(c => ({ name: c.name.split(" — ")[0], spend: c.spent, revenue: c.revenue }))}
                 barSize={14}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
@@ -157,7 +169,7 @@ export default function CampaignsPage() {
                 </tr>
               </thead>
               <tbody>
-                {metaCampaigns.map((c, i) => (
+                {campaigns.map((c, i) => (
                   <tr
                     key={c.id}
                     onClick={() => setSelected(c.id === selected ? null : c.id)}
@@ -216,11 +228,17 @@ export default function CampaignsPage() {
                 </p>
               </div>
               <div style={{ display: "flex", gap: 10 }}>
-                <button style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 8, padding: "7px 14px", color: "#ccc", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  onClick={() => toggleStatus(campaign.id)}
+                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 8, padding: "7px 14px", color: "#ccc", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                >
                   {campaign.status === "active" ? <Pause size={13} /> : <Play size={13} />}
                   {campaign.status === "active" ? "Pausar" : "Reactivar"}
                 </button>
-                <button style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 8, padding: "7px 14px", color: "#3b82f6", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  onClick={() => toast("Abre Meta Business Suite para ver esta campaña en tiempo real", "info")}
+                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 8, padding: "7px 14px", color: "#3b82f6", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                >
                   <ExternalLink size={13} />
                   Ver en Meta
                 </button>
