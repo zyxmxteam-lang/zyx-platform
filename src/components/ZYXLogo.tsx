@@ -41,20 +41,18 @@ export default function ZYXLogo({ size = 40 }: { size?: number }) {
 
 export function ZYXLogoFull({ size = 36 }: { size?: number }) {
   return (
-    <div className="flex items-center gap-3">
-      <ZYXLogo size={size} />
-      <span
-        style={{
-          fontSize: size * 0.6,
-          fontWeight: 700,
-          letterSpacing: "0.15em",
-          color: "white",
-          fontFamily: "inherit",
-          lineHeight: 1,
-        }}
-      >
-        ZYX
-      </span>
-    </div>
+    <span
+      style={{
+        fontSize: size * 0.65,
+        fontWeight: 800,
+        letterSpacing: "0.18em",
+        color: "white",
+        fontFamily: "inherit",
+        lineHeight: 1,
+        display: "inline-block",
+      }}
+    >
+      ZYX
+    </span>
   );
 }

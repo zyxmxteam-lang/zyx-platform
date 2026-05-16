@@ -37,12 +37,27 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<Role>("member");
   const [sending, setSending] = useState(false);
   const [sentSuccess, setSentSuccess] = useState(false);
+  const [sendError, setSendError] = useState("");
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) return;
     setSending(true);
-    await new Promise(r => setTimeout(r, 800));
+    setSendError("");
+
+    const res = await fetch("/api/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: inviteEmail, role: inviteRole, invitedBy: "Diego Sucrovich" }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setSendError(data.error ?? "Error al enviar el email");
+      setSending(false);
+      return;
+    }
 
     const newMember: Member = {
       id: `m${Date.now()}`,
@@ -58,7 +73,7 @@ export default function TeamPage() {
     setSending(false);
     setSentSuccess(true);
     setInviteEmail("");
-    setTimeout(() => { setSentSuccess(false); setShowInvite(false); }, 2500);
+    setTimeout(() => { setSentSuccess(false); setShowInvite(false); }, 3000);
   };
 
   const removeM = (id: string) => {
@@ -117,10 +132,17 @@ export default function TeamPage() {
             {sentSuccess ? (
               <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10 }}>
                 <CheckCircle size={18} color="#22c55e" />
-                <span style={{ fontSize: 13.5, color: "#22c55e" }}>¡Invitación enviada! El miembro recibirá un email.</span>
+                <div>
+                  <p style={{ fontSize: 13.5, color: "#22c55e", fontWeight: 600 }}>¡Invitación enviada!</p>
+                  <p style={{ fontSize: 12.5, color: "#22c55e", opacity: 0.7, marginTop: 2 }}>El email llegará a {inviteEmail || "la dirección indicada"} en unos momentos.</p>
+                </div>
               </div>
             ) : (
-              <>
+              <>{sendError && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
+                  <span style={{ fontSize: 13, color: "#ef4444" }}>⚠ {sendError}</span>
+                </div>
+              )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, marginBottom: 14 }}>
                   <div style={{ position: "relative" }}>
                     <Mail size={14} color="#444" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
